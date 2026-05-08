@@ -27,6 +27,11 @@ import {
   stages,
 } from "@/lib/simulation-content";
 import { knownIssues } from "@/lib/simulation-content";
+import {
+  createBtbWorkflowSchema,
+  createBtbWorkflowTemplate,
+  toAnalyticsCsv,
+} from "@/lib/data-export";
 import { calculateRubricTotal, summarizeSubmission } from "@/lib/scoring";
 import type {
   AuditMark,
@@ -68,18 +73,33 @@ export function AuditTheBotApp() {
   );
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(storageKey);
-    if (stored) {
-      const parsed = JSON.parse(stored) as Submission[];
-      setSubmissions(parsed);
-      setActiveId(parsed[0]?.id ?? null);
-      setSelectedSubmissionId(parsed[0]?.id ?? null);
-    }
+    void loadSubmissions();
   }, []);
 
   useEffect(() => {
     window.localStorage.setItem(storageKey, JSON.stringify(submissions));
   }, [submissions]);
+
+  async function loadSubmissions() {
+    try {
+      const response = await fetch("/api/submissions", { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error("Failed to load server submissions.");
+      }
+      const parsed = (await response.json()) as Submission[];
+      setSubmissions(parsed);
+      setActiveId((current) => current ?? parsed[0]?.id ?? null);
+      setSelectedSubmissionId((current) => current ?? parsed[0]?.id ?? null);
+    } catch {
+      const stored = window.localStorage.getItem(storageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored) as Submission[];
+        setSubmissions(parsed);
+        setActiveId(parsed[0]?.id ?? null);
+        setSelectedSubmissionId(parsed[0]?.id ?? null);
+      }
+    }
+  }
 
   const activeSubmission = useMemo(
     () => submissions.find((submission) => submission.id === activeId) ?? null,
@@ -118,6 +138,11 @@ export function AuditTheBotApp() {
     setActiveId(submission.id);
     setSelectedSubmissionId(submission.id);
     setJoinName("");
+    void fetch("/api/submissions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(submission),
+    });
   }
 
   function updateSubmission(id: string, patch: Partial<Submission>) {
@@ -128,6 +153,11 @@ export function AuditTheBotApp() {
           : submission,
       ),
     );
+    void fetch(`/api/submissions/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
   }
 
   function updateActive(patch: Partial<Submission>) {
@@ -147,6 +177,7 @@ export function AuditTheBotApp() {
     setActiveId(null);
     setSelectedSubmissionId(null);
     window.localStorage.removeItem(storageKey);
+    void fetch("/api/submissions", { method: "DELETE" });
   }
 
   return (
@@ -188,6 +219,7 @@ export function AuditTheBotApp() {
       ) : (
         <InstructorWorkspace
           resetLocalData={resetLocalData}
+          reloadSubmissions={loadSubmissions}
           selectedSubmission={selectedSubmission}
           selectedSubmissionId={selectedSubmissionId}
           setSelectedSubmissionId={setSelectedSubmissionId}
@@ -707,6 +739,7 @@ function SubmittedStage({ onBack }: { onBack: () => void }) {
 
 function InstructorWorkspace({
   resetLocalData,
+  reloadSubmissions,
   selectedSubmission,
   selectedSubmissionId,
   setSelectedSubmissionId,
@@ -714,6 +747,7 @@ function InstructorWorkspace({
   updateSubmission,
 }: {
   resetLocalData: () => void;
+  reloadSubmissions: () => void;
   selectedSubmission: Submission | null;
   selectedSubmissionId: string | null;
   setSelectedSubmissionId: (id: string) => void;
@@ -731,15 +765,35 @@ function InstructorWorkspace({
         );
 
   function exportData() {
-    const blob = new Blob([JSON.stringify(submissions, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "audit-the-bot-submissions.json";
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadFile(
+      "audit-the-bot-submissions.json",
+      JSON.stringify(submissions, null, 2),
+      "application/json",
+    );
+  }
+
+  function exportAnalyticsCsv() {
+    downloadFile(
+      "audit_the_bot_analytics.csv",
+      toAnalyticsCsv(submissions),
+      "text/csv",
+    );
+  }
+
+  function exportWorkflowSchema() {
+    downloadFile(
+      "audit_the_bot_dataset_schema.json",
+      JSON.stringify(createBtbWorkflowSchema(), null, 2),
+      "application/json",
+    );
+  }
+
+  function exportWorkflowTemplate() {
+    downloadFile(
+      "audit_the_bot_analysis_template.json",
+      JSON.stringify(createBtbWorkflowTemplate(), null, 2),
+      "application/json",
+    );
   }
 
   return (
@@ -757,9 +811,25 @@ function InstructorWorkspace({
       </div>
 
       <div className="toolbar">
+        <button className="secondary" onClick={reloadSubmissions} type="button">
+          <RefreshCw size={16} />
+          Refresh Data
+        </button>
         <button className="secondary" onClick={exportData} type="button">
           <Download size={16} />
           Export JSON
+        </button>
+        <button className="secondary" onClick={exportAnalyticsCsv} type="button">
+          <Download size={16} />
+          BTBworkflow CSV
+        </button>
+        <button className="secondary" onClick={exportWorkflowSchema} type="button">
+          <Download size={16} />
+          Schema
+        </button>
+        <button className="secondary" onClick={exportWorkflowTemplate} type="button">
+          <Download size={16} />
+          Template
         </button>
         <button className="ghost danger" onClick={resetLocalData} type="button">
           Clear Local Data
@@ -977,4 +1047,14 @@ function Metric({ label, value }: { label: string; value: string }) {
       <strong>{value}</strong>
     </section>
   );
+}
+
+function downloadFile(fileName: string, content: string, type: string) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
 }
