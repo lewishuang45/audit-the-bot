@@ -2,7 +2,7 @@ import {
   clearSubmissions,
   createSubmission,
   listSubmissions,
-} from "@/lib/sqlite-submission-store";
+} from "@/lib/server-submission-store";
 import type { Submission } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -26,10 +26,10 @@ export async function POST(request: Request) {
     );
   }
 
-  return Response.json(createSubmission(body), { status: 201 });
+  return Response.json(await createSubmission(body), { status: 201 });
 }
 
 export async function DELETE() {
-  clearSubmissions();
+  await clearSubmissions();
   return Response.json({ ok: true });
 }

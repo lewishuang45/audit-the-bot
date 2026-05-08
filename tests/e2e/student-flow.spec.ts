@@ -1,7 +1,13 @@
 import { expect, test } from "@playwright/test";
 
-test("student can join, lock baseline, and reach audit", async ({ page }) => {
+test("student can join, lock baseline, and reach audit", async ({
+  page,
+  request,
+}) => {
+  await request.delete("/api/submissions");
   await page.goto("/");
+  await page.evaluate(() => window.localStorage.clear());
+  await page.reload();
   await page.getByLabel("Participant name").fill("Smoke Tester");
   await page.getByRole("button", { name: /join session/i }).click();
 

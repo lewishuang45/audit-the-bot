@@ -1,7 +1,7 @@
 import {
   deleteSubmission,
   updateSubmission,
-} from "@/lib/sqlite-submission-store";
+} from "@/lib/server-submission-store";
 import type { Submission } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -13,7 +13,7 @@ export async function PATCH(
   const { id } = await context.params;
   const patch = (await request.json()) as Partial<Submission>;
 
-  return Response.json(updateSubmission(id, patch));
+  return Response.json(await updateSubmission(id, patch));
 }
 
 export async function DELETE(
@@ -21,7 +21,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
-  deleteSubmission(id);
+  await deleteSubmission(id);
 
   return Response.json({ ok: true });
 }

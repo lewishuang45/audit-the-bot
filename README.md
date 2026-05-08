@@ -15,20 +15,20 @@ Instructors can monitor progress, inspect submissions, assign rubric scores, and
 
 ## Data Persistence
 
-The app now writes shared classroom submissions to a local SQLite database through server API routes:
+The app now writes shared classroom submissions to a server-side persistent JSON store through API routes:
 
 - `GET /api/submissions`
 - `POST /api/submissions`
 - `PATCH /api/submissions/:id`
 - `DELETE /api/submissions`
 
-By default the database file is:
+By default the store file is:
 
 ```txt
-./data/audit-the-bot.db
+./data/audit-the-bot-submissions.json
 ```
 
-Set `SQLITE_PATH` to move it elsewhere.
+Set `SUBMISSION_STORE_PATH` to move it elsewhere.
 
 ## Local Development
 
@@ -70,4 +70,4 @@ See [docs/btbworkflow-integration.md](docs/btbworkflow-integration.md).
 
 ## Deployment Shape
 
-The current deployment target is a single Node.js process on a VM with SQLite persistence. This is suitable for demos and small classroom trials. For larger concurrent usage, move the same submission model to PostgreSQL.
+The current deployment target is a single Node.js process on a VM with server-side file persistence. This is suitable for demos and small classroom trials. For larger concurrent usage, move the same submission model to PostgreSQL.
