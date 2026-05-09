@@ -1,83 +1,53 @@
-# Agent API Design: Audit the Bot
+# Agent API Design
 
-## Goal
+Audit the Bot is intentionally provider-neutral. Classroom logic should not know
+whether a future live run uses OpenAI, Anthropic, Gemini, an OpenAI-compatible
+provider, or a custom internal HTTP service.
 
-The product should evolve from a fixed simulation into an adaptive classroom system.
+## Current Status
 
-Two agent surfaces are needed:
+The current endpoints are mock-first:
 
-1. `material-generator`: generates each lesson's business brief, flawed AI memo, hidden answer key, sample prompt, revised memo, final memo, and rubric anchors based on historical classroom performance.
-2. `revision`: revises a flawed AI memo using the business brief, student audit marks, and student prompt.
+- `POST /api/agents/materials`
+- `POST /api/agents/revision`
 
-The application should not bind itself to one model provider. Internally it uses one provider-neutral message contract, then maps that contract to common LLM API protocols.
+They return deterministic demo outputs and, when requested, a provider payload
+preview. They do not call live model providers. This keeps the MVP safe for
+public demos, classroom pilots, and recruiter review without requiring secrets
+or paid API access.
 
-## Current Endpoints
+## Agent Roles
 
-### POST `/api/agents/materials`
+### `material-generator`
 
-Purpose: generate or preview a classroom material pack.
+Future purpose: generate a draft lesson pack from instructor constraints and
+historical classroom performance.
 
-Request:
+Expected draft sections:
 
-```json
-{
-  "agent": "material-generator",
-  "input": {
-    "courseTopic": "Critical evaluation of AI output",
-    "targetSkill": "Audit flawed AI business recommendations",
-    "previousSessions": [
-      {
-        "sessionId": "BTB-7041-001",
-        "date": "2026-05-08",
-        "averageDetectionRate": 58,
-        "commonMissedCategories": ["unsupported claim", "ethical or tone risk"],
-        "weakPromptPatterns": ["generic rewrite requests"],
-        "instructorNotes": "Students missed price and distribution constraints."
-      }
-    ],
-    "constraints": {
-      "sessionMinutes": 60,
-      "language": "en",
-      "difficulty": "intro"
-    }
-  },
-  "provider": {
-    "protocol": "openai-responses",
-    "model": "gpt-5.2",
-    "apiKeyEnv": "OPENAI_API_KEY",
-    "temperature": 0.4,
-    "maxOutputTokens": 1600
-  },
-  "includeProviderPayloadPreview": true
-}
-```
+- business brief
+- flawed AI memo
+- hidden answer key and issue categories
+- rubric anchors
+- sample revision prompt
+- sample revised memo
+- sample final memo
+- instructor notes
 
-Response:
+Generated materials are drafts. The instructor approves the final case, answer
+key, and rubric before students use them.
 
-```json
-{
-  "id": "run-id",
-  "agent": "material-generator",
-  "status": "ready-for-live-provider",
-  "output": {
-    "title": "Audit the Bot: CampusTea Spark Launch",
-    "businessBrief": {},
-    "flawedMemo": "...",
-    "samplePrompt": "...",
-    "sampleRevisedMemo": "...",
-    "sampleFinalMemo": "...",
-    "generationRationale": "..."
-  },
-  "providerPayloadPreview": {},
-  "warnings": ["Live provider execution is not enabled yet."]
-}
-```
+### `revision`
 
-### POST `/api/agents/revision`
+Future purpose: revise a flawed AI memo using the business brief, student audit
+marks, and the student's targeted revision prompt.
 
-Purpose: revise the AI memo based on a student's audit and prompt.
+The revision agent should use only provided classroom material. It should not
+invent facts, add unsupported claims, or override the instructor's rubric.
 
-Request:
+## Request Pattern
+
+Requests use a provider-neutral envelope:
 
 ```json
 {
@@ -96,15 +66,22 @@ Request:
     "studentPrompt": "Rewrite using only the brief..."
   },
   "provider": {
-    "protocol": "anthropic-messages",
-    "model": "claude-sonnet",
-    "apiKeyEnv": "ANTHROPIC_API_KEY"
+    "protocol": "openai-responses",
+    "model": "future-model-name",
+    "apiKeyEnv": "OPENAI_API_KEY",
+    "temperature": 0.4,
+    "maxOutputTokens": 1600
   },
   "includeProviderPayloadPreview": true
 }
 ```
 
-Response:
+Important safety rule: browser clients should never send raw API keys. Future
+live execution should resolve `apiKeyEnv` on the server only.
+
+## Response Pattern
+
+Mock mode returns structured output plus warnings when a provider is supplied:
 
 ```json
 {
@@ -112,17 +89,19 @@ Response:
   "agent": "revision",
   "status": "ready-for-live-provider",
   "output": {
-    "revisedMemo": "...",
-    "coachingNotes": ["..."]
+    "revisedMemo": "Deterministic mock memo...",
+    "coachingNotes": ["Mock mode keeps classroom output stable."]
   },
   "providerPayloadPreview": {},
-  "warnings": ["Live provider execution is not enabled yet."]
+  "warnings": [
+    "Live provider execution is not enabled yet. This response includes a provider payload preview only."
+  ]
 }
 ```
 
 ## Supported Provider Protocols
 
-The internal adapter supports these protocol families:
+The adapter currently builds payload previews for:
 
 - `openai-responses`
 - `openai-chat-completions`
@@ -130,61 +109,108 @@ The internal adapter supports these protocol families:
 - `gemini-generate-content`
 - `custom-http`
 
-This covers the practical majority of current hosted LLM APIs:
+These are preview contracts, not live network calls.
 
-- OpenAI's Responses API uses `POST /v1/responses` and supports text, JSON, tools, multimodal inputs, and stateful response flows.
-- OpenAI-compatible chat completion APIs use a `model` plus `messages` structure and are also used by providers such as Mistral.
-- Anthropic's Messages API accepts JSON request bodies and returns JSON response bodies, with `system` content separated from the turn messages.
-- Google's Gemini API uses `models.generateContent`, with `contents`, `parts`, and optional `systemInstruction`.
+## Design Principles
 
-## Design Decisions
+### Mock First
 
-### 1. Provider-Neutral Internal Contract
+The MVP is a classroom simulation and public demo. Deterministic output is a
+feature because students can compare reasoning without model randomness changing
+the exercise mid-session.
 
-The UI and classroom logic should never build provider-specific payloads directly. They call:
+### Provider-Neutral Classroom Logic
+
+The UI and scoring logic call shared helpers:
 
 - `createMaterialAgentMessages`
 - `createRevisionAgentMessages`
 - `buildProviderPayload`
 
-This prevents the product from being rewritten every time the model provider changes.
+Provider-specific request shapes stay behind the adapter boundary.
 
-### 2. Historical Classroom Data Is First-Class Input
+### Server-Side Secrets Only
 
-The material generator receives:
+Future live provider execution must use environment variables such as:
 
-- prior detection rates,
-- common missed categories,
-- weak prompt patterns,
-- instructor notes.
+- `OPENAI_API_KEY`
+- `ANTHROPIC_API_KEY`
+- `GEMINI_API_KEY`
 
-This lets the agent generate harder or more targeted future material.
+Raw keys must not be stored in localStorage, committed to git, included in
+browser requests, or exported with classroom data.
 
-### 3. Mock First, Live Later
+### Instructor Authority
 
-Current endpoints return mock outputs plus optional provider payload previews. This keeps the MVP stable while making the live integration path explicit.
+The instructor remains the final authority for:
 
-### 4. Keys Are Referenced, Not Sent
+- lesson approval
+- hidden answer key approval
+- rubric calibration
+- final student scores
+- decisions about whether generated material is suitable for a class
 
-Requests should include `apiKeyEnv`, not raw API keys. The server should resolve environment variables in the future live executor.
+Agent outputs are aids, not graders of record.
 
-### 5. Instructor Remains Final Authority
+### No Vendor Lock-In
 
-Agent-generated materials and scoring suggestions should be treated as drafts. The instructor approves final material and rubric anchors before class.
+Classroom concepts such as briefs, audit marks, prompts, rationales, and rubric
+scores should remain stable even if the model provider changes. The app should
+not couple student progress, storage, or scoring to one LLM vendor's response
+format.
+
+## Endpoint Details
+
+### `POST /api/agents/materials`
+
+Purpose: preview a future material-generation run.
+
+Required input:
+
+- `agent: "material-generator"`
+- `input.courseTopic`
+- `input.targetSkill`
+
+Optional input:
+
+- `input.previousSessions`
+- `input.constraints`
+- `provider`
+- `includeProviderPayloadPreview`
+
+### `POST /api/agents/revision`
+
+Purpose: preview a future memo-revision run.
+
+Required input:
+
+- `agent: "revision"`
+- `input.businessBrief`
+- `input.flawedMemo`
+
+Optional input:
+
+- `input.auditMarks`
+- `input.studentPrompt`
+- `provider`
+- `includeProviderPayloadPreview`
 
 ## Implementation Files
 
 - Agent contracts and adapters: `src/lib/agent-api.ts`
 - Material endpoint: `src/app/api/agents/materials/route.ts`
 - Revision endpoint: `src/app/api/agents/revision/route.ts`
+- Sample lesson pack: `src/data/sampleLesson.ts`
 - Adapter tests: `src/lib/agent-api.test.ts`
 
-## Source Notes
+## Future Live Execution Requirements
 
-- Next.js Route Handlers are defined as `route.ts` files inside the `app` directory and support HTTP methods such as `POST`: https://nextjs.org/docs/app/getting-started/route-handlers
-- OpenAI Responses API creates model responses through `POST /v1/responses`: https://platform.openai.com/docs/api-reference/responses
-- OpenAI Chat Completions API uses chat messages and supports JSON schema response formats: https://platform.openai.com/docs/api-reference/chat/create-chat-completion
-- Anthropic's API accepts JSON request bodies and returns JSON response bodies: https://docs.anthropic.com/en/api/overview
-- Google's Gemini API exposes standard content generation through `models.generateContent`: https://ai.google.dev/api/generate-content
-- Mistral's Chat Completion API accepts a list of chat messages and returns an assistant message: https://docs.mistral.ai/studio-api/conversations/chat-completion
+Before enabling live provider calls:
 
+1. Add server-only provider executors.
+2. Validate all incoming request bodies.
+3. Resolve API keys from server environment variables only.
+4. Add provider timeout, retry, and rate-limit behavior.
+5. Log metadata without storing raw prompts that contain student identifiers.
+6. Keep instructor approval required for generated materials.
+7. Add tests that prove raw keys are never accepted from the browser.

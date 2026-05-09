@@ -253,6 +253,11 @@ function StudentWorkspace({
           <p className="eyebrow">Session {businessBrief.sessionCode}</p>
           <h2>{businessBrief.title}</h2>
           <p>{businessBrief.task}</p>
+          <p className="stage-copy">
+            Your goal is to inspect, challenge, and steer AI output. Write a
+            human baseline first, audit a flawed AI memo, prompt a revision,
+            compare the result, and submit a human-edited final memo.
+          </p>
           <div className="join-form">
             <label htmlFor="participantName">Participant name</label>
             <input
@@ -406,6 +411,10 @@ function BaselineStage({
         label="Human-Only Baseline"
         title="Write your recommendation before seeing the AI memo"
       />
+      <p className="stage-copy">
+        Capture your own judgment first. This gives you something to compare
+        against the AI instead of starting from its framing.
+      </p>
       <label htmlFor="baseline">Baseline recommendation</label>
       <textarea
         id="baseline"
@@ -463,10 +472,12 @@ function AuditStage({
         <StageHeader
           icon={<ClipboardCheck size={20} />}
           label="AI-Only Audit"
-          title="Tag the flawed AI memo"
+          title="Identify what is wrong before asking for a rewrite"
         />
         <p className="stage-copy">
-          Mark statements that should be questioned, revised, or rejected.
+          Do not just rewrite the AI. Mark statements that should be questioned,
+          revised, or rejected, and explain the evidence or constraint behind
+          each mark.
         </p>
       </div>
       <div className="memo-list">
@@ -578,6 +589,11 @@ function PromptStage({
         label="Coached AI Revision"
         title="Write a targeted revision prompt"
       />
+      <p className="stage-copy">
+        A strong prompt names the flaws you found, the brief constraints, the
+        evidence boundaries, the desired structure, and the tone the memo should
+        use.
+      </p>
       <label htmlFor="prompt">Revision prompt</label>
       <textarea
         id="prompt"
@@ -611,8 +627,13 @@ function RevisionStage({ onNext }: { onNext: () => void }) {
         <StageHeader
           icon={<RefreshCw size={20} />}
           label="AI Revision"
-          title="Compare original and revised memo"
+          title="Compare whether the AI actually improved"
         />
+        <p className="stage-copy">
+          Check the revision against your audit. Better wording is not enough if
+          the memo still invents facts, ignores constraints, or keeps unsupported
+          claims.
+        </p>
       </div>
       <div className="comparison-grid">
         <MemoPanel title="Original flawed memo" tone="warning">
@@ -627,7 +648,10 @@ function RevisionStage({ onNext }: { onNext: () => void }) {
         </MemoPanel>
       </div>
       <div className="panel action-panel">
-        <span>Mock AI output is deterministic for classroom consistency.</span>
+        <span>
+          Mock AI output is deterministic so students compare reasoning, not
+          provider randomness.
+        </span>
         <button className="primary" onClick={onNext} type="button">
           <PencilLine size={16} />
           Final Edit
@@ -661,6 +685,11 @@ function FinalStage({
         label="Human-AI Final Editing"
         title="Submit the final memo and rationale"
       />
+      <p className="stage-copy">
+        The final submission must be human-edited. Keep what is useful, revise
+        what is incomplete, reject what is unsafe or unsupported, and explain
+        your reasoning.
+      </p>
       <label htmlFor="finalMemo">Final recommendation memo</label>
       <textarea
         id="finalMemo"
@@ -911,6 +940,12 @@ function SubmissionDetail({
         <span>{summary.detectedKnownIssues} known issues found</span>
         <span>{summary.detectionRate}% detection</span>
       </div>
+
+      <p className="stage-copy">
+        Evaluate both the final memo and the reasoning process: baseline
+        judgment, audit accuracy, prompt specificity, comparison, and human edit
+        rationale.
+      </p>
 
       <div className="detail-section">
         <h3>Baseline</h3>

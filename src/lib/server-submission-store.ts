@@ -11,6 +11,10 @@ const defaultStorePath = path.join(
   "data",
   "audit-the-bot-submissions.json",
 );
+const vercelDemoStorePath = path.join(
+  /* turbopackIgnore: true */ "/tmp",
+  "audit-the-bot-submissions.json",
+);
 
 let writeQueue = Promise.resolve();
 
@@ -96,5 +100,9 @@ async function writeStore(payload: StorePayload) {
 }
 
 function getStorePath() {
-  return process.env.SUBMISSION_STORE_PATH ?? defaultStorePath;
+  if (process.env.SUBMISSION_STORE_PATH) {
+    return process.env.SUBMISSION_STORE_PATH;
+  }
+
+  return process.env.VERCEL ? vercelDemoStorePath : defaultStorePath;
 }

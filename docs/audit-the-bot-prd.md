@@ -19,8 +19,8 @@ The core product claim is not "AI writes better answers." The claim is: students
 
 Primary source documents:
 
-- `/Users/lewishuang45/Desktop/Study/HKU/M5/7041/Ass/MSBA 7041 Assignment1.pdf`
-- `/Users/lewishuang45/Desktop/Study/HKU/M5/7041/Ass/MSBA 7041 Assignment2.pdf`
+- MSBA 7041 Assignment 1 draft
+- MSBA 7041 Assignment 2 draft
 
 Assignment 1 defines the skill: critical evaluation and active steering of AI outputs.
 
@@ -264,4 +264,3 @@ The MVP is successful when:
 - Should the product store real student names, or use anonymous IDs to reduce privacy risk?
 - What exact business case should be used in the first template?
 - Should the final output be a memo, a slide, or both?
-

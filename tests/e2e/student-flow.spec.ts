@@ -21,7 +21,9 @@ test("student can join, lock baseline, and reach audit", async ({
     );
   await page.getByRole("button", { name: /lock baseline/i }).click();
 
-  await expect(page.getByText("Tag the flawed AI memo")).toBeVisible();
+  await expect(
+    page.getByText("Identify what is wrong before asking for a rewrite"),
+  ).toBeVisible();
   await page.getByRole("button", { name: /mark issue/i }).first().click();
   await expect(page.getByLabel("Issue category").first()).toBeVisible();
 });

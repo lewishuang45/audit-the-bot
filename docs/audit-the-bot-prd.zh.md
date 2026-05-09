@@ -10,8 +10,8 @@ Audit the Bot 是一个基于两份 MSBA 7041 文稿设计的课堂模拟 Web �
 
 依据文件：
 
-- `/Users/lewishuang45/Desktop/Study/HKU/M5/7041/Ass/MSBA 7041 Assignment1.pdf`
-- `/Users/lewishuang45/Desktop/Study/HKU/M5/7041/Ass/MSBA 7041 Assignment2.pdf`
+- MSBA 7041 Assignment 1 draft
+- MSBA 7041 Assignment 2 draft
 
 Assignment 1 定义了要训练的能力：评估 AI 输出的准确性、实用性、局限和影响，并通过修改、调整或拒绝来提升最终结果。
 
@@ -230,4 +230,3 @@ MVP 算成功，需要满足：
 - rubric 每个分数档的评分锚点还没有。
 
 这些内容不补齐，代码可以写，但教学效果和评分会悬空。
-
