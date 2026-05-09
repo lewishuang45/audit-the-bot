@@ -246,6 +246,55 @@ function StudentWorkspace({
   setJoinName: (value: string) => void;
   updateActive: (patch: Partial<Submission>) => void;
 }) {
+  const [isGeneratingRevision, setIsGeneratingRevision] = useState(false);
+  const [revisionStatus, setRevisionStatus] = useState<string | null>(null);
+
+  async function generateRevision() {
+    if (!activeSubmission?.prompt.trim()) {
+      return;
+    }
+
+    setIsGeneratingRevision(true);
+    setRevisionStatus("Generating live AI revision...");
+    try {
+      const response = await fetch("/api/agents/revision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agent: "revision",
+          input: {
+            businessBrief: JSON.stringify(businessBrief, null, 2),
+            flawedMemo: flawedMemoStatements
+              .map((statement) => `${statement.id}: ${statement.text}`)
+              .join("\n\n"),
+            auditMarks: Object.values(activeSubmission.auditMarks),
+            studentPrompt: activeSubmission.prompt,
+          },
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error?.message ?? "Revision generation failed.");
+      }
+
+      updateActive({
+        revisedMemo: payload.output.revisedMemo,
+        stage: "revision",
+      });
+      setRevisionStatus(
+        payload.status === "live"
+          ? "Live Gemini revision generated."
+          : "Mock revision generated.",
+      );
+    } catch (error) {
+      setRevisionStatus(
+        error instanceof Error ? error.message : "Revision generation failed.",
+      );
+    } finally {
+      setIsGeneratingRevision(false);
+    }
+  }
+
   if (!activeSubmission) {
     return (
       <section className="join-layout">
@@ -325,14 +374,18 @@ function StudentWorkspace({
         {activeSubmission.stage === "prompt" && (
           <PromptStage
             onChange={(prompt) => updateActive({ prompt })}
-            onGenerate={() =>
-              updateActive({ revisedMemo, stage: "revision" })
-            }
+            onGenerate={generateRevision}
+            isGenerating={isGeneratingRevision}
             prompt={activeSubmission.prompt}
+            status={revisionStatus}
           />
         )}
         {activeSubmission.stage === "revision" && (
-          <RevisionStage onNext={() => moveActiveTo("final")} />
+          <RevisionStage
+            onNext={() => moveActiveTo("final")}
+            revisedMemoText={activeSubmission.revisedMemo || revisedMemo}
+            revisionStatus={revisionStatus}
+          />
         )}
         {activeSubmission.stage === "final" && (
           <FinalStage
@@ -574,13 +627,17 @@ function AuditStage({
 }
 
 function PromptStage({
+  isGenerating,
   onChange,
   onGenerate,
   prompt,
+  status,
 }: {
+  isGenerating: boolean;
   onChange: (prompt: string) => void;
   onGenerate: () => void;
   prompt: string;
+  status: string | null;
 }) {
   return (
     <section className="panel stage-panel">
@@ -608,19 +665,28 @@ function PromptStage({
         </button>
         <button
           className="primary"
-          disabled={!prompt.trim()}
+          disabled={!prompt.trim() || isGenerating}
           onClick={onGenerate}
           type="button"
         >
           <Sparkles size={16} />
-          Generate Revised Memo
+          {isGenerating ? "Generating..." : "Generate Revised Memo"}
         </button>
       </div>
+      {status ? <p className="status-note">{status}</p> : null}
     </section>
   );
 }
 
-function RevisionStage({ onNext }: { onNext: () => void }) {
+function RevisionStage({
+  onNext,
+  revisedMemoText,
+  revisionStatus,
+}: {
+  onNext: () => void;
+  revisedMemoText: string;
+  revisionStatus: string | null;
+}) {
   return (
     <section className="stage-stack">
       <div className="panel stage-panel">
@@ -641,16 +707,16 @@ function RevisionStage({ onNext }: { onNext: () => void }) {
             <p key={statement.id}>{statement.text}</p>
           ))}
         </MemoPanel>
-        <MemoPanel title="Mock revised memo" tone="success">
-          {revisedMemo.split("\n\n").map((paragraph) => (
+        <MemoPanel title="Revised memo" tone="success">
+          {revisedMemoText.split("\n\n").map((paragraph) => (
             <p key={paragraph}>{paragraph}</p>
           ))}
         </MemoPanel>
       </div>
       <div className="panel action-panel">
         <span>
-          Mock AI output is deterministic so students compare reasoning, not
-          provider randomness.
+          {revisionStatus ??
+            "Compare the revision against your audit before final editing."}
         </span>
         <button className="primary" onClick={onNext} type="button">
           <PencilLine size={16} />

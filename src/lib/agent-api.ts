@@ -69,7 +69,7 @@ export type AgentRunRequest<TInput> = {
 export type AgentRunResult<TOutput> = {
   id: string;
   agent: AgentType;
-  status: "mocked" | "ready-for-live-provider";
+  status: "mocked" | "ready-for-live-provider" | "live";
   output: TOutput;
   providerPayloadPreview?: unknown;
   warnings: string[];
@@ -311,4 +311,125 @@ export function runMockRevisionAgent(
         ]
       : [],
   };
+}
+
+export type GeminiRevisionOptions = {
+  apiKey: string;
+  model: string;
+  timeoutMs?: number;
+};
+
+type GeminiGenerateContentResponse = {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{ text?: string }>;
+    };
+  }>;
+};
+
+function extractJsonObject(text: string): unknown {
+  const trimmed = text.trim();
+  if (trimmed.startsWith("{")) {
+    return JSON.parse(trimmed);
+  }
+
+  const match = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (match?.[1]) {
+    return JSON.parse(match[1]);
+  }
+
+  const start = trimmed.indexOf("{");
+  const end = trimmed.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    return JSON.parse(trimmed.slice(start, end + 1));
+  }
+
+  throw new Error("Gemini response did not contain JSON.");
+}
+
+function parseRevisionOutput(text: string): RevisionOutput {
+  const parsed = extractJsonObject(text) as Partial<RevisionOutput>;
+  if (!parsed.revisedMemo || typeof parsed.revisedMemo !== "string") {
+    throw new Error("Gemini response did not include revisedMemo.");
+  }
+
+  return {
+    revisedMemo: parsed.revisedMemo,
+    coachingNotes: Array.isArray(parsed.coachingNotes)
+      ? parsed.coachingNotes.filter((note): note is string => typeof note === "string")
+      : [],
+  };
+}
+
+export async function runGeminiRevisionAgent(
+  request: AgentRunRequest<RevisionAgentInput>,
+  options: GeminiRevisionOptions,
+): Promise<AgentRunResult<RevisionOutput>> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 20000);
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+    options.model,
+  )}:generateContent?key=${encodeURIComponent(options.apiKey)}`;
+  const messages = createRevisionAgentMessages(request.input);
+  const systemText = messages
+    .filter((message) => message.role === "system")
+    .map((message) => message.content)
+    .join("\n\n");
+  const userText = messages
+    .filter((message) => message.role !== "system")
+    .map((message) => message.content)
+    .join("\n\n");
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [
+            {
+              text: `${systemText}\n\nReturn strict JSON with this shape: {"revisedMemo":"...","coachingNotes":["..."]}.`,
+            },
+          ],
+        },
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: userText }],
+          },
+        ],
+        generationConfig: {
+          temperature: request.provider?.temperature ?? 0.3,
+          maxOutputTokens: request.provider?.maxOutputTokens ?? 1400,
+          responseMimeType: "application/json",
+        },
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(`Gemini request failed (${response.status}): ${detail.slice(0, 300)}`);
+    }
+
+    const payload = (await response.json()) as GeminiGenerateContentResponse;
+    const text = payload.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text ?? "")
+      .join("")
+      .trim();
+
+    if (!text) {
+      throw new Error("Gemini response was empty.");
+    }
+
+    return {
+      id: crypto.randomUUID(),
+      agent: "revision",
+      status: "live",
+      output: parseRevisionOutput(text),
+      warnings: [],
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 }

@@ -109,7 +109,9 @@ The adapter currently builds payload previews for:
 - `gemini-generate-content`
 - `custom-http`
 
-These are preview contracts, not live network calls.
+The revision endpoint can now execute a live Gemini call when `ATB_LIVE_AI=true`
+and `GEMINI_API_KEY` are configured on the server. Other provider protocols and
+the material-generation endpoint remain preview/mock contracts.
 
 ## Design Principles
 
@@ -207,7 +209,7 @@ Optional input:
 
 Before enabling live provider calls:
 
-1. Add server-only provider executors.
+1. Add server-only provider executors for each provider.
 2. Validate all incoming request bodies.
 3. Resolve API keys from server environment variables only.
 4. Add provider timeout, retry, and rate-limit behavior.

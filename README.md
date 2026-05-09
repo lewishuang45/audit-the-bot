@@ -164,6 +164,20 @@ HTTP protocols without coupling classroom logic to a single vendor.
 
 See [docs/agent-api-design.md](docs/agent-api-design.md).
 
+## Optional Live Gemini Revision
+
+The student revision step can run against Gemini from the server when these
+environment variables are configured:
+
+```bash
+ATB_LIVE_AI=true
+GEMINI_API_KEY=your_server_side_key
+GEMINI_MODEL=gemini-2.5-flash-lite
+```
+
+Keys must stay server-side. If Gemini is not configured, the app keeps using the
+deterministic mock revision.
+
 ## Current MVP boundary
 
 - Persistence is intentionally lightweight.

@@ -286,6 +286,11 @@ li {
   color: var(--muted);
 }
 
+.status-note {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
 .brief-grid {
   display: grid;
   gap: 0.75rem;
