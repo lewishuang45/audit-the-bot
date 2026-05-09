@@ -7,6 +7,14 @@ human-edited final work.
 Instead of teaching students to trust AI, it teaches them to inspect, challenge,
 and steer AI.
 
+## Live Demo
+
+Try the public demo at [atb.staruptech.online](https://atb.staruptech.online).
+
+The demo is routed through Cloudflare Tunnel and is intended for recruiter
+review, classroom walkthroughs, and lightweight product demonstrations, not
+production use.
+
 ## Context for Reviewers
 
 Audit the Bot is an independent side project built as a public, inspectable
