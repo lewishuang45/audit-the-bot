@@ -66,6 +66,7 @@ const defaultScore: RubricScore = {
 export function AuditTheBotApp() {
   const [mode, setMode] = useState<Mode>("student");
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [hasLoadedSubmissions, setHasLoadedSubmissions] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [joinName, setJoinName] = useState("");
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(
@@ -77,27 +78,34 @@ export function AuditTheBotApp() {
   }, []);
 
   useEffect(() => {
+    if (!hasLoadedSubmissions) {
+      return;
+    }
+
     window.localStorage.setItem(storageKey, JSON.stringify(submissions));
-  }, [submissions]);
+  }, [hasLoadedSubmissions, submissions]);
 
   async function loadSubmissions() {
+    const storedSubmissions = readStoredSubmissions();
+
     try {
       const response = await fetch("/api/submissions", { cache: "no-store" });
       if (!response.ok) {
         throw new Error("Failed to load server submissions.");
       }
       const parsed = (await response.json()) as Submission[];
-      setSubmissions(parsed);
-      setActiveId((current) => current ?? parsed[0]?.id ?? null);
-      setSelectedSubmissionId((current) => current ?? parsed[0]?.id ?? null);
+      const loaded = parsed.length > 0 ? parsed : storedSubmissions;
+      setSubmissions(loaded);
+      setActiveId((current) => current ?? loaded[0]?.id ?? null);
+      setSelectedSubmissionId((current) => current ?? loaded[0]?.id ?? null);
     } catch {
-      const stored = window.localStorage.getItem(storageKey);
-      if (stored) {
-        const parsed = JSON.parse(stored) as Submission[];
-        setSubmissions(parsed);
-        setActiveId(parsed[0]?.id ?? null);
-        setSelectedSubmissionId(parsed[0]?.id ?? null);
-      }
+      setSubmissions(storedSubmissions);
+      setActiveId((current) => current ?? storedSubmissions[0]?.id ?? null);
+      setSelectedSubmissionId(
+        (current) => current ?? storedSubmissions[0]?.id ?? null,
+      );
+    } finally {
+      setHasLoadedSubmissions(true);
     }
   }
 
@@ -229,6 +237,20 @@ export function AuditTheBotApp() {
       )}
     </main>
   );
+}
+
+function readStoredSubmissions(): Submission[] {
+  const stored = window.localStorage.getItem(storageKey);
+  if (!stored) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(stored) as unknown;
+    return Array.isArray(parsed) ? (parsed as Submission[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 function StudentWorkspace({

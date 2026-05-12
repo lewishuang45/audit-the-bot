@@ -115,9 +115,8 @@ flowchart LR
 
 ## Product screenshots
 
-These are public-safe generated placeholders that show the intended demo
-experience. Replace them with live deployment screenshots before a formal
-launch.
+These screenshots are captured from the current demo UI and contain only
+synthetic classroom data.
 
 ![Student flow](docs/assets/student-flow.png)
 
@@ -191,7 +190,7 @@ deterministic mock revision.
 
 ## Roadmap
 
-- Replace placeholder screenshots with real Vercel deployment screenshots.
+- Refresh screenshots after major UI changes or a production deployment.
 - Add optional durable backend storage for multi-session classroom use.
 - Add instructor-created lesson packs.
 - Add server-side live provider execution behind safe environment-variable key
@@ -260,6 +259,10 @@ Before making the repository public:
 - Keep generated materials subject to instructor approval.
 - Run the checks in
   [PUBLIC_RELEASE_CHECKLIST.md](PUBLIC_RELEASE_CHECKLIST.md).
+
+## License
+
+MIT. See [LICENSE](LICENSE).
 
 ## BTBworkflow integration
 

@@ -11,9 +11,48 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
-  const patch = (await request.json()) as Partial<Submission>;
+  let patch: Partial<Submission> | null;
 
-  return Response.json(await updateSubmission(id, patch));
+  try {
+    patch = (await request.json()) as Partial<Submission>;
+  } catch {
+    return Response.json(
+      {
+        error: {
+          code: "INVALID_JSON",
+          message: "Request body must be valid JSON.",
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  if (!patch) {
+    return Response.json(
+      {
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Request body must be a JSON object.",
+        },
+      },
+      { status: 422 },
+    );
+  }
+
+  try {
+    return Response.json(await updateSubmission(id, patch));
+  } catch (error) {
+    return Response.json(
+      {
+        error: {
+          code: "SUBMISSION_NOT_FOUND",
+          message:
+            error instanceof Error ? error.message : "Submission not found.",
+        },
+      },
+      { status: 404 },
+    );
+  }
 }
 
 export async function DELETE(

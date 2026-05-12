@@ -2,9 +2,23 @@ import { runMockMaterialAgent } from "@/lib/agent-api";
 import type { AgentRunRequest, MaterialAgentInput } from "@/lib/agent-api";
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as AgentRunRequest<MaterialAgentInput>;
+  let body: Partial<AgentRunRequest<MaterialAgentInput>> | null;
 
-  if (body.agent !== "material-generator") {
+  try {
+    body = (await request.json()) as Partial<AgentRunRequest<MaterialAgentInput>>;
+  } catch {
+    return Response.json(
+      {
+        error: {
+          code: "INVALID_JSON",
+          message: "Request body must be valid JSON.",
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  if (!body || body.agent !== "material-generator") {
     return Response.json(
       {
         error: {
@@ -28,5 +42,5 @@ export async function POST(request: Request) {
     );
   }
 
-  return Response.json(runMockMaterialAgent(body));
+  return Response.json(runMockMaterialAgent(body as AgentRunRequest<MaterialAgentInput>));
 }

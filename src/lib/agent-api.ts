@@ -44,7 +44,7 @@ export type SessionPerformanceSummary = {
 export type MaterialAgentInput = {
   courseTopic: string;
   targetSkill: string;
-  previousSessions: SessionPerformanceSummary[];
+  previousSessions?: SessionPerformanceSummary[];
   constraints?: {
     sessionMinutes?: number;
     language?: "en" | "zh" | "bilingual";
@@ -55,8 +55,8 @@ export type MaterialAgentInput = {
 export type RevisionAgentInput = {
   businessBrief: string;
   flawedMemo: string;
-  auditMarks: AuditMark[];
-  studentPrompt: string;
+  auditMarks?: AuditMark[];
+  studentPrompt?: string;
 };
 
 export type AgentRunRequest<TInput> = {
@@ -106,7 +106,7 @@ export function createMaterialAgentMessages(
           task: "Generate a one-session Audit the Bot classroom content pack.",
           courseTopic: input.courseTopic,
           targetSkill: input.targetSkill,
-          previousSessions: input.previousSessions,
+          previousSessions: input.previousSessions ?? [],
           constraints: input.constraints,
           requiredSections: [
             "businessBrief",
@@ -141,8 +141,8 @@ export function createRevisionAgentMessages(
         {
           businessBrief: input.businessBrief,
           flawedMemo: input.flawedMemo,
-          auditMarks: input.auditMarks,
-          studentPrompt: input.studentPrompt,
+          auditMarks: input.auditMarks ?? [],
+          studentPrompt: input.studentPrompt ?? "",
           outputRules: [
             "Return a revised memo only.",
             "Respect all case constraints.",

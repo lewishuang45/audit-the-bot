@@ -56,9 +56,23 @@ function checkLiveRateLimit(clientId: string) {
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as AgentRunRequest<RevisionAgentInput>;
+  let body: Partial<AgentRunRequest<RevisionAgentInput>> | null;
 
-  if (body.agent !== "revision") {
+  try {
+    body = (await request.json()) as Partial<AgentRunRequest<RevisionAgentInput>>;
+  } catch {
+    return Response.json(
+      {
+        error: {
+          code: "INVALID_JSON",
+          message: "Request body must be valid JSON.",
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  if (!body || body.agent !== "revision") {
     return Response.json(
       {
         error: {
@@ -92,7 +106,7 @@ export async function POST(request: Request) {
 
     try {
       return Response.json(
-        await runGeminiRevisionAgent(body, {
+        await runGeminiRevisionAgent(body as AgentRunRequest<RevisionAgentInput>, {
           apiKey,
           model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash-lite",
           timeoutMs: Number(process.env.GEMINI_TIMEOUT_MS ?? "20000"),
@@ -114,5 +128,5 @@ export async function POST(request: Request) {
     }
   }
 
-  return Response.json(runMockRevisionAgent(body));
+  return Response.json(runMockRevisionAgent(body as AgentRunRequest<RevisionAgentInput>));
 }

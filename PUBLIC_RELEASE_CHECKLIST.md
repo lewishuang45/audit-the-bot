@@ -5,25 +5,32 @@ applications, or piloting it with a class.
 
 ## Safety
 
-- [ ] No real API keys, service tokens, deployment names, private endpoints, or
+- [x] No real API keys, service tokens, deployment names, private endpoints, or
       credentials are committed.
-- [ ] No private student data is included in source, docs, screenshots, exports,
+- [x] No private student data is included in source, docs, screenshots, exports,
       tests, or sample files.
-- [ ] No real classroom submissions are committed.
-- [ ] No personal identifiers, email addresses, phone numbers, or private file
+- [x] No real classroom submissions are committed.
+- [x] No personal identifiers, email addresses, phone numbers, or private file
       paths are included.
-- [ ] No live provider execution is enabled without server-side key handling.
-- [ ] No raw API keys are sent from the client or stored in browser storage.
-- [ ] Instructor approval remains required for generated lesson materials.
-- [ ] The sample lesson content is original, synthetic, and safe for public use.
+- [x] No live provider execution is enabled without server-side key handling.
+- [x] No raw API keys are sent from the client or stored in browser storage.
+- [x] Instructor approval remains required for generated lesson materials.
+- [x] The sample lesson content is original, synthetic, and safe for public use.
 
 ## Demo Boundary
 
-- [ ] README explains that the MVP is demo-first and suitable for controlled
+- [x] README explains that the MVP is demo-first and suitable for controlled
       classroom trials.
-- [ ] README explains the browser localStorage boundary and future backend plan.
-- [ ] Vercel deployment notes say no provider keys are required for demo mode.
-- [ ] Screenshots contain no private data.
+- [x] README explains the browser localStorage boundary and future backend plan.
+- [x] Vercel deployment notes say no provider keys are required for demo mode.
+- [x] Screenshots contain no private data.
+
+## Repository Metadata
+
+- [x] MIT license is included for public GitHub release.
+- [x] `package.json` declares the MIT license.
+- [x] GitHub Actions CI is configured for tests, build, e2e, and audit on
+      `main`.
 
 ## Validation Commands
 

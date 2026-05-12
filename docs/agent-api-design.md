@@ -167,6 +167,41 @@ format.
 
 Purpose: preview a future material-generation run.
 
+Example request:
+
+```json
+{
+  "agent": "material-generator",
+  "input": {
+    "courseTopic": "Critical evaluation of AI output",
+    "targetSkill": "Audit flawed AI business recommendations",
+    "previousSessions": [
+      {
+        "sessionId": "BTB-7041-001",
+        "date": "2026-05-08",
+        "averageDetectionRate": 58,
+        "commonMissedCategories": ["unsupported claim", "ethical or tone risk"],
+        "weakPromptPatterns": ["generic rewrite requests"],
+        "instructorNotes": "Students missed price and distribution constraints."
+      }
+    ],
+    "constraints": {
+      "sessionMinutes": 60,
+      "language": "en",
+      "difficulty": "intro"
+    }
+  },
+  "provider": {
+    "protocol": "openai-responses",
+    "model": "future-model-name",
+    "apiKeyEnv": "OPENAI_API_KEY",
+    "temperature": 0.4,
+    "maxOutputTokens": 1600
+  },
+  "includeProviderPayloadPreview": true
+}
+```
+
 Required input:
 
 - `agent: "material-generator"`
@@ -183,6 +218,33 @@ Optional input:
 ### `POST /api/agents/revision`
 
 Purpose: preview a future memo-revision run.
+
+Example request:
+
+```json
+{
+  "agent": "revision",
+  "input": {
+    "businessBrief": "Full brief text",
+    "flawedMemo": "Original flawed AI memo",
+    "auditMarks": [
+      {
+        "statementId": "s2",
+        "decision": "revise",
+        "category": "factual error",
+        "note": "64% said try below HKD 18, not buy."
+      }
+    ],
+    "studentPrompt": "Rewrite using only the brief..."
+  },
+  "provider": {
+    "protocol": "anthropic-messages",
+    "model": "future-model-name",
+    "apiKeyEnv": "ANTHROPIC_API_KEY"
+  },
+  "includeProviderPayloadPreview": true
+}
+```
 
 Required input:
 
@@ -216,3 +278,19 @@ Before enabling live provider calls:
 5. Log metadata without storing raw prompts that contain student identifiers.
 6. Keep instructor approval required for generated materials.
 7. Add tests that prove raw keys are never accepted from the browser.
+
+## Source Notes
+
+- Next.js Route Handlers are defined as `route.ts` files inside the `app`
+  directory and support HTTP methods such as `POST`:
+  https://nextjs.org/docs/app/getting-started/route-handlers
+- OpenAI Responses API creates model responses through `POST /v1/responses`:
+  https://platform.openai.com/docs/api-reference/responses
+- OpenAI Chat Completions API uses chat messages and supports JSON schema
+  response formats: https://platform.openai.com/docs/api-reference/chat/create-chat-completion
+- Anthropic's API accepts JSON request bodies and returns JSON response bodies:
+  https://docs.anthropic.com/en/api/overview
+- Google's Gemini API exposes standard content generation through
+  `models.generateContent`: https://ai.google.dev/api/generate-content
+- Mistral's Chat Completion API accepts a list of chat messages and returns an
+  assistant message: https://docs.mistral.ai/studio-api/conversations/chat-completion

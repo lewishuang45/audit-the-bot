@@ -12,9 +12,23 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as Submission;
+  let body: Partial<Submission> | null;
 
-  if (!body.id || !body.participantName) {
+  try {
+    body = (await request.json()) as Partial<Submission>;
+  } catch {
+    return Response.json(
+      {
+        error: {
+          code: "INVALID_JSON",
+          message: "Request body must be valid JSON.",
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  if (!body?.id || !body.participantName) {
     return Response.json(
       {
         error: {
@@ -26,7 +40,7 @@ export async function POST(request: Request) {
     );
   }
 
-  return Response.json(await createSubmission(body), { status: 201 });
+  return Response.json(await createSubmission(body as Submission), { status: 201 });
 }
 
 export async function DELETE() {
